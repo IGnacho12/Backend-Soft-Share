@@ -65,11 +65,11 @@ const server = createServer(async (req, res) => {
         });
 
         req.on("end", async () => {
-          const { autor, comentario } = JSON.parse(body);
+          const { autor, comentario, fecha } = JSON.parse(body);
           try {
             await sql`
               INSERT INTO comentarios (autor, comentario, fecha)
-              VALUES (${autor}, ${comentario}, CURRENT_TIMESTAMP)
+              VALUES (${autor}, ${comentario}, ${fecha})
             `;
             res.statusCode = 201;
             res.setHeader("Content-Type", "application/json; charset=utf-8");
