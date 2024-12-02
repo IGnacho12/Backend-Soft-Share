@@ -11,13 +11,13 @@ const server = createServer(async (req, res) => {
   console.log(`Acabo de recibir una petición, a la ruta ${req.url}`);
 
   // Configurar encabezados CORS
-  res.setHeader("Access-Control-Allow-Origin", "*");  // Permitir todos los orígenes
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");  // Permitir métodos GET y POST
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");  // Permitir el encabezado Content-Type
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   // Manejo de solicitudes OPTIONS (preflight)
   if (req.method === "OPTIONS") {
-    res.writeHead(204); // Respuesta sin contenido
+    res.writeHead(204);
     res.end();
     return;
   }
@@ -30,11 +30,9 @@ const server = createServer(async (req, res) => {
       res.end("¡Bienvenido al servidor de Soft Share!");
       break;
 
-    case "/get": // Cuando se quiera obtener todos los programas se utiliza get
+    case "/get": // Obtener programas
       try {
         const result = await sql`SELECT * FROM programas ORDER BY nombre ASC`;
-
-        // Configurar la respuesta
         res.setHeader("Content-Type", "application/json; charset=utf-8");
         res.end(JSON.stringify(result));
       } catch (error) {
@@ -42,6 +40,45 @@ const server = createServer(async (req, res) => {
         res.statusCode = 500;
         res.setHeader("Content-Type", "text/plain; charset=utf-8");
         res.end("Error al obtener los datos de la base de datos.");
+      }
+      break;
+
+    case "/comments": // Obtener comentarios
+      if (req.method === "GET") {
+        try {
+          const comments = await sql`SELECT autor, comentario, fecha FROM comentarios ORDER BY id DESC`;
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(comments));
+        } catch (error) {
+          console.error("Error al consultar los comentarios:", error);
+          res.statusCode = 500;
+          res.setHeader("Content-Type", "text/plain; charset=utf-8");
+          res.end("Error al obtener los comentarios.");
+        }
+      } else if (req.method === "POST") {
+        // Agregar un nuevo comentario
+        let body = "";
+        req.on("data", (chunk) => {
+          body += chunk;
+        });
+
+        req.on("end", async () => {
+          const { autor, comentario } = JSON.parse(body);
+          try {
+            await sql`
+              INSERT INTO comentarios (autor, comentario, fecha)
+              VALUES (${autor}, ${comentario}, CURRENT_TIMESTAMP)
+            `;
+            res.statusCode = 201;
+            res.setHeader("Content-Type", "application/json; charset=utf-8");
+            res.end(JSON.stringify({ message: "Comentario agregado exitosamente" }));
+          } catch (error) {
+            console.error("Error al agregar el comentario:", error);
+            res.statusCode = 500;
+            res.setHeader("Content-Type", "text/plain; charset=utf-8");
+            res.end("Error al agregar el comentario.");
+          }
+        });
       }
       break;
 
@@ -53,7 +90,6 @@ const server = createServer(async (req, res) => {
   }
 });
 
-// Crear el servidor y ponerlo en escucha
 server.listen(PORT, () => {
   console.log(`El servidor está en escucha por el puerto: http://localhost:${PORT}`);
 });
