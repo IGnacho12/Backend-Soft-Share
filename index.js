@@ -9,8 +9,18 @@ const PORT = process.env.port || 1234;
 
 const server = createServer(async (req, res) => {
   console.log(`Acabo de recibir una petición, a la ruta ${req.url}`);
-  res.setHeader("Access-Control-Allow-Origin", "*");
 
+  // Configurar encabezados CORS
+  res.setHeader("Access-Control-Allow-Origin", "*");  // Permitir todos los orígenes
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");  // Permitir métodos GET y POST
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");  // Permitir el encabezado Content-Type
+
+  // Manejo de solicitudes OPTIONS (preflight)
+  if (req.method === "OPTIONS") {
+    res.writeHead(204); // Respuesta sin contenido
+    res.end();
+    return;
+  }
 
   const URL = req.url;
 
@@ -22,8 +32,7 @@ const server = createServer(async (req, res) => {
 
     case "/get": // Cuando se quiera obtener todos los programas se utiliza get
       try {
-        const result = await sql`SELECT * FROM programas
-    ORDER BY nombre ASC`;
+        const result = await sql`SELECT * FROM programas ORDER BY nombre ASC`;
 
         // Configurar la respuesta
         res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -44,12 +53,7 @@ const server = createServer(async (req, res) => {
   }
 });
 
-// Creear el servidor
-// Ponerlo en escucha
-// Administrar las peticiones
-
+// Crear el servidor y ponerlo en escucha
 server.listen(PORT, () => {
-  console.log(
-    `El servidor esta en escucha por el puerto: http://localhost:${PORT}`
-  );
+  console.log(`El servidor está en escucha por el puerto: http://localhost:${PORT}`);
 });
