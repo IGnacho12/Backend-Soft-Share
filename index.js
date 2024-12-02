@@ -1,6 +1,8 @@
 import { createServer } from "node:http";
 import { neon } from "@neondatabase/serverless";
 
+let hola = 1
+
 const sql = neon(
   "postgresql://Programs-db_owner:gt7QxJLNI4rP@ep-shrill-brook-a5j8odhx.us-east-2.aws.neon.tech/Programs-db?sslmode=require"
 );
