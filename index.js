@@ -83,6 +83,47 @@ const server = createServer(async (req, res) => {
         });
       }
       break;
+      case "/search": // Ruta para búsquedas
+  if (req.method === "POST") {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
+
+    req.on("end", async () => {
+      const { inputValue } = JSON.parse(body);
+
+      if (!inputValue) {
+        res.statusCode = 400;
+        res.setHeader("Content-Type", "application/json; charset=utf-8");
+        res.end(JSON.stringify({ error: "El campo inputValue es requerido." }));
+        return;
+      }
+
+      try {
+        // Realizar búsqueda en la base de datos
+        const resultados = await sql`
+          SELECT * FROM programas
+          WHERE LOWER(nombre) LIKE ${"%" + inputValue.toLowerCase() + "%"}
+          ORDER BY nombre ASC
+        `;
+
+        res.setHeader("Content-Type", "application/json; charset=utf-8");
+        res.end(JSON.stringify(resultados));
+      } catch (error) {
+        console.error("Error al realizar la búsqueda:", error);
+        res.statusCode = 500;
+        res.setHeader("Content-Type", "text/plain; charset=utf-8");
+        res.end("Error al realizar la búsqueda en la base de datos.");
+      }
+    });
+  } else {
+    res.statusCode = 405; // Método no permitido
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.end("Método no permitido para esta ruta.");
+  }
+  break;
+
 
     default:
       res.statusCode = 404;
