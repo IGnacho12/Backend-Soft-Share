@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { neon } from "@neondatabase/serverless";
 
-let hola = 1
+let hola = 1;
 
 const sql = neon(
   "postgresql://Programs-db_owner:gt7QxJLNI4rP@ep-shrill-brook-a5j8odhx.us-east-2.aws.neon.tech/Programs-db?sslmode=require"
@@ -48,7 +48,8 @@ const server = createServer(async (req, res) => {
     case "/comments": // Obtener comentarios
       if (req.method === "GET") {
         try {
-          const comments = await sql`SELECT autor, comentario, fecha FROM comentarios ORDER BY id DESC`;
+          const comments =
+            await sql`SELECT autor, comentario, fecha FROM comentarios ORDER BY id DESC`;
           res.setHeader("Content-Type", "application/json; charset=utf-8");
           res.end(JSON.stringify(comments));
         } catch (error) {
@@ -73,7 +74,9 @@ const server = createServer(async (req, res) => {
             `;
             res.statusCode = 201;
             res.setHeader("Content-Type", "application/json; charset=utf-8");
-            res.end(JSON.stringify({ message: "Comentario agregado exitosamente" }));
+            res.end(
+              JSON.stringify({ message: "Comentario agregado exitosamente" })
+            );
           } catch (error) {
             console.error("Error al agregar el comentario:", error);
             res.statusCode = 500;
@@ -83,47 +86,48 @@ const server = createServer(async (req, res) => {
         });
       }
       break;
-      case "/search": // Ruta para búsquedas
-  if (req.method === "POST") {
-    let body = "";
-    req.on("data", (chunk) => {
-      body += chunk;
-    });
+    case "/search": // Ruta para búsquedas
+      if (req.method === "POST") {
+        let body = "";
+        req.on("data", (chunk) => {
+          body += chunk;
+        });
 
-    req.on("end", async () => {
-      const { inputValue } = JSON.parse(body);
+        req.on("end", async () => {
+          const { inputValue } = JSON.parse(body);
 
-      if (!inputValue) {
-        res.statusCode = 400;
-        res.setHeader("Content-Type", "application/json; charset=utf-8");
-        res.end(JSON.stringify({ error: "El campo inputValue es requerido." }));
-        return;
-      }
+          if (!inputValue) {
+            res.statusCode = 400;
+            res.setHeader("Content-Type", "application/json; charset=utf-8");
+            res.end(
+              JSON.stringify({ error: "El campo inputValue es requerido." })
+            );
+            return;
+          }
 
-      try {
-        // Realizar búsqueda en la base de datos
-        const resultados = await sql`
+          try {
+            // Realizar búsqueda en la base de datos
+            const resultados = await sql`
           SELECT * FROM programas
           WHERE LOWER(nombre) LIKE ${"%" + inputValue.toLowerCase() + "%"}
           ORDER BY nombre ASC
         `;
 
-        res.setHeader("Content-Type", "application/json; charset=utf-8");
-        res.end(JSON.stringify(resultados));
-      } catch (error) {
-        console.error("Error al realizar la búsqueda:", error);
-        res.statusCode = 500;
+            res.setHeader("Content-Type", "application/json; charset=utf-8");
+            res.end(JSON.stringify(resultados));
+          } catch (error) {
+            console.error("Error al realizar la búsqueda:", error);
+            res.statusCode = 500;
+            res.setHeader("Content-Type", "text/plain; charset=utf-8");
+            res.end("Error al realizar la búsqueda en la base de datos.");
+          }
+        });
+      } else {
+        res.statusCode = 405; // Método no permitido
         res.setHeader("Content-Type", "text/plain; charset=utf-8");
-        res.end("Error al realizar la búsqueda en la base de datos.");
+        res.end("Método no permitido para esta ruta.");
       }
-    });
-  } else {
-    res.statusCode = 405; // Método no permitido
-    res.setHeader("Content-Type", "text/plain; charset=utf-8");
-    res.end("Método no permitido para esta ruta.");
-  }
-  break;
-
+      break;
 
     default:
       res.statusCode = 404;
@@ -134,5 +138,7 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`El servidor está en escucha por el puerto: http://localhost:${PORT}`);
+  console.log(
+    `El servidor está en escucha por el puerto: http://localhost:${PORT}`
+  );
 });
