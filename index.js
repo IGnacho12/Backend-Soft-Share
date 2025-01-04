@@ -13,9 +13,9 @@ const server = createServer(async (req, res) => {
   console.log(`Petición recibida en la ruta: ${req.url}`);
 
   // Configurar encabezados CORS
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Origin", "http://localhost:4321"); // Cambia a '*' solo para desarrollo
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   // Manejo de solicitudes OPTIONS (preflight)
   if (req.method === "OPTIONS") {
