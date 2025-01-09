@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import { neon } from "@neondatabase/serverless";
+import { arrayBuffer } from "node:stream/consumers";
 
 // Configura la conexión a la base de datos
 const sql = neon(
@@ -71,14 +72,16 @@ const server = createServer(async (req, res) => {
                 res.end("Faltan campos requeridos.");
                 return;
               }
-
+              
               await sql`
                 INSERT INTO comentarios (autor, comentario, fecha)
                 VALUES (${autor}, ${comentario}, ${fecha})
               `;
 
               res.statusCode = 201;
-              res.end(JSON.stringify({ message: "Comentario agregado exitosamente" }));
+              res.end(
+                JSON.stringify({ message: "Comentario agregado exitosamente" })
+              );
             } catch (error) {
               console.error("Error al agregar el comentario:", error);
               res.statusCode = 500;
@@ -101,20 +104,47 @@ const server = createServer(async (req, res) => {
           req.on("end", async () => {
             try {
               const { inputValue } = JSON.parse(body);
-              if (!inputValue) {
+              const { preferenciaDeCategorias } = JSON.parse(body);
+
+              console.log(body);
+
+              console.log(
+                `La preferencia de categorias es: ${preferenciaDeCategorias}`
+              );
+              console.log(inputValue);
+              if (!inputValue && preferenciaDeCategorias.length === 0) {
                 res.statusCode = 400;
-                res.end(JSON.stringify({ error: "El campo inputValue es requerido." }));
+                res.end(
+                  JSON.stringify({ error: "El campo inputValue es requerido." })
+                );
                 return;
               }
 
-              const resultados = await sql`
+              if (preferenciaDeCategorias.length === 0) {
+                const resultados = await sql`
                 SELECT * FROM programas
                 WHERE LOWER(nombre) LIKE ${"%" + inputValue.toLowerCase() + "%"}
                 ORDER BY nombre ASC
               `;
+                res.setHeader(
+                  "Content-Type",
+                  "application/json; charset=utf-8"
+                );
+                res.end(JSON.stringify(resultados));
+              } else {
+                const resultados = await sql`
+  SELECT * FROM programas
+  WHERE LOWER(nombre) LIKE ${"%" + inputValue.toLowerCase() + "%"}
+  AND categorias @> ${preferenciaDeCategorias}
+  ORDER BY nombre ASC
+`;
 
-              res.setHeader("Content-Type", "application/json; charset=utf-8");
-              res.end(JSON.stringify(resultados));
+                res.setHeader(
+                  "Content-Type",
+                  "application/json; charset=utf-8"
+                );
+                res.end(JSON.stringify(resultados));
+              }
             } catch (error) {
               console.error("Error al realizar la búsqueda:", error);
               res.statusCode = 500;
