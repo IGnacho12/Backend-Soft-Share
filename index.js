@@ -1,6 +1,5 @@
 import { createServer } from "node:http";
 import { neon } from "@neondatabase/serverless";
-import { arrayBuffer } from "node:stream/consumers";
 
 // Configura la conexión a la base de datos
 const sql = neon(
