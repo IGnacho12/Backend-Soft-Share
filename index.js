@@ -31,6 +31,7 @@ const server = createServer(async (req, res) => {
       case "/":
         res.setHeader("Content-Type", "text/plain; charset=utf-8");
         res.end("¡Bienvenido al servidor de Soft Share!");
+        return;
         break;
 
       case "/get": // Obtener programas
@@ -38,10 +39,12 @@ const server = createServer(async (req, res) => {
           const result = await sql`SELECT * FROM programas ORDER BY nombre ASC`;
           res.setHeader("Content-Type", "application/json; charset=utf-8");
           res.end(JSON.stringify(result));
+          return;
         } catch (error) {
           console.error("Error al consultar la base de datos:", error);
           res.statusCode = 500;
           res.end("Error al obtener los datos de la base de datos.");
+          return;
         }
         break;
 
@@ -52,10 +55,12 @@ const server = createServer(async (req, res) => {
               await sql`SELECT autor, comentario, fecha FROM comentarios ORDER BY id DESC`;
             res.setHeader("Content-Type", "application/json; charset=utf-8");
             res.end(JSON.stringify(comments));
+            return;
           } catch (error) {
             console.error("Error al consultar los comentarios:", error);
             res.statusCode = 500;
             res.end("Error al obtener los comentarios.");
+            return;
           }
         } else if (req.method === "POST") {
           let body = "";
@@ -81,15 +86,18 @@ const server = createServer(async (req, res) => {
               res.end(
                 JSON.stringify({ message: "Comentario agregado exitosamente" })
               );
+              return;
             } catch (error) {
               console.error("Error al agregar el comentario:", error);
               res.statusCode = 500;
               res.end("Error al agregar el comentario.");
+              return;
             }
           });
         } else {
           res.statusCode = 405;
           res.end("Método no permitido.");
+          return;
         }
         break;
 
@@ -102,8 +110,12 @@ const server = createServer(async (req, res) => {
 
           req.on("end", async () => {
             try {
+              res.setHeader("Content-Type", "application/json; charset=utf-8");
+
+              let preferenciaDeCategorias = [];
               const { inputValue } = JSON.parse(body);
-              const { preferenciaDeCategorias } = JSON.parse(body);
+              preferenciaDeCategorias =
+                JSON.parse(body).preferenciaDeCategorias;
 
               console.log(body);
 
@@ -125,47 +137,116 @@ const server = createServer(async (req, res) => {
                 WHERE LOWER(nombre) LIKE ${"%" + inputValue.toLowerCase() + "%"}
                 ORDER BY nombre ASC
               `;
-                res.setHeader(
-                  "Content-Type",
-                  "application/json; charset=utf-8"
-                );
                 res.end(JSON.stringify(resultados));
+                return;
               } else {
                 const resultados = await sql`
-  SELECT * FROM programas
-  WHERE LOWER(nombre) LIKE ${"%" + inputValue.toLowerCase() + "%"}
-  AND categorias @> ${preferenciaDeCategorias}
-  ORDER BY nombre ASC
-`;
+                  SELECT * FROM programas
+                  WHERE LOWER(nombre) LIKE ${
+                    "%" + inputValue.toLowerCase() + "%"
+                  }
+                  AND categorias @> ${preferenciaDeCategorias}
+                  ORDER BY nombre ASC
+                `;
 
-                res.setHeader(
-                  "Content-Type",
-                  "application/json; charset=utf-8"
-                );
                 res.end(JSON.stringify(resultados));
+                return;
               }
             } catch (error) {
               console.error("Error al realizar la búsqueda:", error);
               res.statusCode = 500;
               res.end("Error al realizar la búsqueda en la base de datos.");
+              return;
             }
           });
         } else {
           res.statusCode = 405;
           res.end("Método no permitido para esta ruta.");
+          return;
         }
         break;
 
-      default:
-        res.statusCode = 404;
-        res.setHeader("Content-Type", "text/plain; charset=utf-8");
-        res.end("404 Not Found");
-        break;
+      // Agregar Programa
+      case "/post":
+        console.log(`Método recibido: ${req.method}`);
+        if (req.method === "POST") {
+          let body = "";
+          req.on("data", (chunk) => {
+            body += chunk;
+          });
+
+          req.on("end", async () => {
+            try {
+
+              console.log(body);
+
+              const {
+                nombre,
+                link_de_imagen,
+                link_de_descarga,
+                detalles,
+                categoriaSeleccionada,
+              } = JSON.parse(body);
+
+
+              // console.log(body);
+
+              if (
+                !nombre ||
+                !link_de_imagen ||
+                !link_de_descarga ||
+                !detalles
+              ) {
+                res.statusCode = 400;
+                res.end(JSON.stringify({ error: "Faltan campos requeridos." }));
+                return;
+              }
+
+
+              // Inserción en la base de datos
+              const resultados = await sql`
+                INSERT INTO programas (
+                  nombre, 
+                  link_de_imagen, 
+                  link_de_descarga, 
+                  detalles, 
+                  categorias
+                ) 
+                VALUES (
+                  ${nombre}, 
+                  ${link_de_imagen}, 
+                  ${link_de_descarga}, 
+                  ${detalles}, 
+                  ${categoriaSeleccionada}::TEXT[] -- Indica explícitamente que es un array de texto
+                )
+              `;
+
+              res.setHeader("Content-Type", "application/json; charset=utf-8");
+              return;
+            } catch (error) {
+              console.error("Error al realizar la búsqueda:", error);
+              res.statusCode = 500;
+              res.end("Error al realizar la búsqueda en la base de datos.");
+              return;
+            }
+          });
+        } else {
+          res.statusCode = 405;
+          res.end("Método no permitido para esta ruta.");
+          return;
+        }
+
+      // default:
+      //   res.statusCode = 404;
+      //   res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      //   res.end("404 Not Found");
+      //   break;
     }
   } catch (error) {
     console.error("Error inesperado:", error);
     res.statusCode = 500;
     res.end("Error interno del servidor.");
+    return;
   }
 });
 
