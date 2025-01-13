@@ -203,7 +203,6 @@ const server = createServer(async (req, res) => {
               }
 
 
-              // Inserción en la base de datos
               const resultados = await sql`
                 INSERT INTO programas (
                   nombre, 
@@ -217,11 +216,12 @@ const server = createServer(async (req, res) => {
                   ${link_de_imagen}, 
                   ${link_de_descarga}, 
                   ${detalles}, 
-                  ${categoriaSeleccionada}::TEXT[] -- Indica explícitamente que es un array de texto
+                  ${categoriaSeleccionada}::TEXT[]
                 )
-              `;
+              `; // el ::Text[] indica que el valor es un array de t
+              // exto
 
-              res.setHeader("Content-Type", "application/json; charset=utf-8");
+              res.end("Progrma agregado exitosamente");
               return;
             } catch (error) {
               console.error("Error al realizar la búsqueda:", error);
