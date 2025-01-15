@@ -3,14 +3,9 @@ import { neon } from "@neondatabase/serverless";
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Configura la conexión a la base de datos
-
-
 const sql = neon(
   process.env.DATABASE_URL
 );
-
-
 
 const PORT = process.env.PORT || 1234;
 
