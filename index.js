@@ -31,7 +31,7 @@ const server = createServer(async (req, res) => {
     switch (URL) {
       case "/":
         res.setHeader("Content-Type", "text/plain; charset=utf-8");
-        res.end(`Bienvienido al server esta es la variable de entorno: ${process.env.sql}`);
+        res.end(`Bienvienido al servidor de soft-share 😊🤖`);
         return;
 
       case "/get": // Obtener programas
