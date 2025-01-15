@@ -1,10 +1,16 @@
 import { createServer } from "node:http";
 import { neon } from "@neondatabase/serverless";
+import dotenv from 'dotenv';
+dotenv.config();
 
 // Configura la conexión a la base de datos
+
+
 const sql = neon(
-  "postgresql://Programs-db_owner:gt7QxJLNI4rP@ep-shrill-brook-a5j8odhx.us-east-2.aws.neon.tech/Programs-db?sslmode=require"
+  process.env.DATABASE_URL
 );
+
+
 
 const PORT = process.env.PORT || 1234;
 
@@ -30,9 +36,8 @@ const server = createServer(async (req, res) => {
     switch (URL) {
       case "/":
         res.setHeader("Content-Type", "text/plain; charset=utf-8");
-        res.end("¡Bienvenido al servidor de Soft Share!");
+        res.end(`Bienvienido al server esta es la variable de entorno: ${process.env.sql}`);
         return;
-        break;
 
       case "/get": // Obtener programas
         try {
