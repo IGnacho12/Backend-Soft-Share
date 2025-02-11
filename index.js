@@ -185,7 +185,7 @@ const server = createServer(async (req, res) => {
                 link_de_imagen,
                 link_de_descarga,
                 detalles,
-                categoriaSeleccionada,
+                categoriaSeleccionadaFinal,
               } = JSON.parse(body);
 
 
@@ -216,7 +216,7 @@ const server = createServer(async (req, res) => {
                   ${link_de_imagen}, 
                   ${link_de_descarga}, 
                   ${detalles}, 
-                  ${categoriaSeleccionada}::TEXT[]
+                  ${categoriaSeleccionadaFinal}::TEXT[]
                 )
               `; // el ::Text[] indica que el valor es un array de t
               // exto
