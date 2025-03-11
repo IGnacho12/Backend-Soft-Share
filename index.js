@@ -1,11 +1,9 @@
 import { createServer } from "node:http";
 import { neon } from "@neondatabase/serverless";
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 dotenv.config();
 
-const sql = neon(
-  process.env.DATABASE_URL
-);
+const sql = neon(process.env.DATABASE_URL);
 
 const PORT = process.env.PORT || 1234;
 
@@ -177,8 +175,7 @@ const server = createServer(async (req, res) => {
 
           req.on("end", async () => {
             try {
-
-              console.log(body);
+              // console.log(body);
 
               const {
                 nombre,
@@ -188,8 +185,8 @@ const server = createServer(async (req, res) => {
                 categoriaSeleccionadaFinal,
               } = JSON.parse(body);
 
-
-              // console.log(body);
+              console.log(categoriaSeleccionadaFinal);
+              console.log(body);
 
               if (
                 !nombre ||
@@ -202,6 +199,13 @@ const server = createServer(async (req, res) => {
                 return;
               }
 
+              // Esto convierte las categorias seleccionas de esto [ 'Categoria 1, Categoria 2' ] -> [ 'Categoria 1', 'Categoria 2' ]
+
+              console.log(categoriaSeleccionadaFinal);
+              let array = categoriaSeleccionadaFinal
+              const resultadoArray = array.map((item) => item.split(", ")).flat();
+
+              console.log(resultadoArray);
 
               const resultados = await sql`
                 INSERT INTO programas (
@@ -216,10 +220,9 @@ const server = createServer(async (req, res) => {
                   ${link_de_imagen}, 
                   ${link_de_descarga}, 
                   ${detalles}, 
-                  ${categoriaSeleccionadaFinal}::TEXT[]
+                  ${resultadoArray}
                 )
-              `; // el ::Text[] indica que el valor es un array de t
-              // exto
+              `;
 
               res.end("Progrma agregado exitosamente");
               return;
