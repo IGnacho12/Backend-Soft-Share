@@ -12,7 +12,9 @@
   "description": "",
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.7",
-    "vercel": "^41.3.2"
+    "express": "^4.21.2",
+    "vercel": "^25.2.0"
   }
 }

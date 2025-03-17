@@ -1,258 +1,168 @@
-import { createServer } from "node:http";
+import express, { json } from "express";
+const Servidor = express(); // Se inicializa el servidor con express
+const port = process.env.PORT || 3000; // Se establece el puerto, (process.env.PORT) Se utiliza para que vercel le ponga el puerto  que quiera al servidor y no de probelmas de otra forma utliziara el puerto 3000
 import { neon } from "@neondatabase/serverless";
 import dotenv from "dotenv";
 dotenv.config();
+const consulta = neon(process.env.DATABASE_URL);
 
-const sql = neon(process.env.DATABASE_URL);
+import cors from "cors";
+Servidor.use(cors());
+Servidor.use(express.json());
 
-const PORT = process.env.PORT || 1234;
+// Se establecen las rutas y el comportamiento de las peticiones
+Servidor.get("/", (req, res) => {
+  res.send("Bienvenido a el servidor de Soft - Share 😊🤖");
+});
 
-// Crea el servidor HTTP
-const server = createServer(async (req, res) => {
-  console.log(`Petición recibida en la ruta: ${req.url}`);
-
-  // Configurar encabezados CORS
-  res.setHeader("Access-Control-Allow-Origin", "*"); // Cambia a '*' solo para desarrollo
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-  // Manejo de solicitudes OPTIONS (preflight)
-  if (req.method === "OPTIONS") {
-    res.writeHead(204);
-    res.end();
-    return;
-  }
-
-  const URL = req.url;
-
+// OBTENER PROGRAMAS
+Servidor.get("/get", async (req, res) => {
   try {
-    switch (URL) {
-      case "/":
-        res.setHeader("Content-Type", "text/plain; charset=utf-8");
-        res.end(`Bienvienido al servidor de soft-share 😊🤖`);
-        return;
-
-      case "/get": // Obtener programas
-        try {
-          const result = await sql`SELECT * FROM programas ORDER BY nombre ASC`;
-          res.setHeader("Content-Type", "application/json; charset=utf-8");
-          res.end(JSON.stringify(result));
-          return;
-        } catch (error) {
-          console.error("Error al consultar la base de datos:", error);
-          res.statusCode = 500;
-          res.end("Error al obtener los datos de la base de datos.");
-          return;
-        }
-        break;
-
-      case "/comments": // Obtener o agregar comentarios
-        if (req.method === "GET") {
-          try {
-            const comments =
-              await sql`SELECT autor, comentario, fecha FROM comentarios ORDER BY id DESC`;
-            res.setHeader("Content-Type", "application/json; charset=utf-8");
-            res.end(JSON.stringify(comments));
-            return;
-          } catch (error) {
-            console.error("Error al consultar los comentarios:", error);
-            res.statusCode = 500;
-            res.end("Error al obtener los comentarios.");
-            return;
-          }
-        } else if (req.method === "POST") {
-          let body = "";
-          req.on("data", (chunk) => {
-            body += chunk;
-          });
-
-          req.on("end", async () => {
-            try {
-              const { autor, comentario, fecha } = JSON.parse(body);
-              if (!autor || !comentario || !fecha) {
-                res.statusCode = 400;
-                res.end("Faltan campos requeridos.");
-                return;
-              }
-
-              await sql`
-                INSERT INTO comentarios (autor, comentario, fecha)
-                VALUES (${autor}, ${comentario}, ${fecha})
-              `;
-
-              res.statusCode = 201;
-              res.end(
-                JSON.stringify({ message: "Comentario agregado exitosamente" })
-              );
-              return;
-            } catch (error) {
-              console.error("Error al agregar el comentario:", error);
-              res.statusCode = 500;
-              res.end("Error al agregar el comentario.");
-              return;
-            }
-          });
-        } else {
-          res.statusCode = 405;
-          res.end("Método no permitido.");
-          return;
-        }
-        break;
-
-      case "/search": // Buscar programas
-        if (req.method === "POST") {
-          let body = "";
-          req.on("data", (chunk) => {
-            body += chunk;
-          });
-
-          req.on("end", async () => {
-            try {
-              res.setHeader("Content-Type", "application/json; charset=utf-8");
-
-              let preferenciaDeCategorias = [];
-              const { inputValue } = JSON.parse(body);
-              preferenciaDeCategorias =
-                JSON.parse(body).preferenciaDeCategorias;
-
-              console.log(body);
-
-              console.log(
-                `La preferencia de categorias es: ${preferenciaDeCategorias}`
-              );
-              console.log(inputValue);
-              if (!inputValue && preferenciaDeCategorias.length === 0) {
-                res.statusCode = 400;
-                res.end(
-                  JSON.stringify({ error: "El campo inputValue es requerido." })
-                );
-                return;
-              }
-
-              if (preferenciaDeCategorias.length === 0) {
-                const resultados = await sql`
-                SELECT * FROM programas
-                WHERE LOWER(nombre) LIKE ${"%" + inputValue.toLowerCase() + "%"}
-                ORDER BY nombre ASC
-              `;
-                res.end(JSON.stringify(resultados));
-                return;
-              } else {
-                const resultados = await sql`
-                  SELECT * FROM programas
-                  WHERE LOWER(nombre) LIKE ${
-                    "%" + inputValue.toLowerCase() + "%"
-                  }
-                  AND categorias @> ${preferenciaDeCategorias}
-                  ORDER BY nombre ASC
-                `;
-
-                res.end(JSON.stringify(resultados));
-                return;
-              }
-            } catch (error) {
-              console.error("Error al realizar la búsqueda:", error);
-              res.statusCode = 500;
-              res.end("Error al realizar la búsqueda en la base de datos.");
-              return;
-            }
-          });
-        } else {
-          res.statusCode = 405;
-          res.end("Método no permitido para esta ruta.");
-          return;
-        }
-        break;
-
-      // Agregar Programa
-      case "/post":
-        console.log(`Método recibido: ${req.method}`);
-        if (req.method === "POST") {
-          let body = "";
-          req.on("data", (chunk) => {
-            body += chunk;
-          });
-
-          req.on("end", async () => {
-            try {
-              // console.log(body);
-
-              const {
-                nombre,
-                link_de_imagen,
-                link_de_descarga,
-                detalles,
-                categoriaSeleccionadaFinal,
-              } = JSON.parse(body);
-
-              console.log(categoriaSeleccionadaFinal);
-              console.log(body);
-
-              if (
-                !nombre ||
-                !link_de_imagen ||
-                !link_de_descarga ||
-                !detalles
-              ) {
-                res.statusCode = 400;
-                res.end(JSON.stringify({ error: "Faltan campos requeridos." }));
-                return;
-              }
-
-              // Esto convierte las categorias seleccionas de esto [ 'Categoria 1, Categoria 2' ] -> [ 'Categoria 1', 'Categoria 2' ]
-
-              console.log(categoriaSeleccionadaFinal);
-              let array = categoriaSeleccionadaFinal
-              const resultadoArray = array.map((item) => item.split(", ")).flat();
-
-              console.log(resultadoArray);
-
-              const resultados = await sql`
-                INSERT INTO programas (
-                  nombre, 
-                  link_de_imagen, 
-                  link_de_descarga, 
-                  detalles, 
-                  categorias
-                ) 
-                VALUES (
-                  ${nombre}, 
-                  ${link_de_imagen}, 
-                  ${link_de_descarga}, 
-                  ${detalles}, 
-                  ${resultadoArray}
-                )
-              `;
-
-              res.end("Progrma agregado exitosamente");
-              return;
-            } catch (error) {
-              console.error("Error al realizar la búsqueda:", error);
-              res.statusCode = 500;
-              res.end("Error al realizar la búsqueda en la base de datos.");
-              return;
-            }
-          });
-        } else {
-          res.statusCode = 405;
-          res.end("Método no permitido para esta ruta.");
-          return;
-        }
-
-      // default:
-      //   res.statusCode = 404;
-      //   res.setHeader("Content-Type", "text/plain; charset=utf-8");
-      //   res.end("404 Not Found");
-      //   break;
-    }
+    const resultadoConsulta =
+      await consulta`SELECT * FROM programas ORDER BY nombre ASC`;
+    res.type("json");
+    res.status(200).send(resultadoConsulta);
+    return;
   } catch (error) {
-    console.error("Error inesperado:", error);
-    res.statusCode = 500;
-    res.end("Error interno del servidor.");
+    res
+      .status(500)
+      .send(
+        `Error a la hora de ejecutar la consulta a la base de datos, ${error}`
+      );
     return;
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`El servidor está en escucha en: http://localhost:${PORT}`);
+// OBTENER COMENTARIOS
+Servidor.get("/comments", async (req, res) => {
+  try {
+    const resultadoConsulta =
+      await consulta`SELECT autor, comentario, fecha FROM comentarios ORDER BY id DESC`;
+    res.type("json");
+    res.status(200).send(resultadoConsulta);
+    return;
+  } catch (error) {
+    res
+      .status(500)
+      .send(`Error al obtener los comentarios de la base de datos, ${error}`);
+    return;
+  }
+});
+
+// Insertar comentarios
+Servidor.post("/comments", async (req, res) => {
+  try {
+    const { autor, comentario, fecha } = req.body;
+    const arrayDeAutorComentarioFechaAInsertar = [autor, comentario, fecha];
+
+    // Comprobar que no exista otro comentario con el mismo autor, comentario o fecha
+    const resultadoConsulta = await consulta`SELECT * FROM comentarios`;
+
+    if (!Array.isArray(resultadoConsulta)) {
+      throw new Error("La consulta no devolvió un array válido.");
+    }
+
+    const valoresComentarios = resultadoConsulta
+      .map((obj) => Object.values(obj))
+      .flat();
+
+    for (let i = 0; i < arrayDeAutorComentarioFechaAInsertar.length; i++) {
+      if (
+        valoresComentarios.includes(arrayDeAutorComentarioFechaAInsertar[i])
+      ) {
+        res.status(400).send("El comentario tiene campos duplicados");
+        return;
+      }
+    }
+
+    await consulta`INSERT INTO comentarios (autor, comentario, fecha)
+    VALUES (${autor}, ${comentario}, ${fecha});
+    `;
+
+    res.send(`La creación del comentario ha finalizado sin errores.`);
+  } catch (error) {
+    res
+      .status(500)
+      .send(
+        `Error al insertar el comentario en la base de datos: ${error.message}`
+      );
+  }
+});
+
+// Buscar Programas
+Servidor.post("/search", async (req, res) => {
+  let preferenciaDeCategorias = [];
+  // Obtener el valor de la búsqueda del usuario
+  const inputValue = req.body.inputValue.toLowerCase();
+  preferenciaDeCategorias = req.body.preferenciaDeCategorias;
+
+  if (!inputValue && preferenciaDeCategorias.length === 0) {
+    res.status(400).send("Los campos nulos no son válidos");
+    return;
+  }
+
+  if (preferenciaDeCategorias.length === 0) {
+    const resultadosConsulta = await consulta`
+      SELECT * FROM programas
+      WHERE LOWER(nombre) LIKE ${"%" + inputValue + "%"}
+      ORDER BY nombre ASC
+    `;
+    res.send(resultadosConsulta);
+    return;
+  } else {
+    const resultadosConsulta = await consulta`
+    SELECT * FROM programas
+    WHERE LOWER(nombre) LIKE ${"%" + inputValue + "%"}
+    AND categorias @> ${preferenciaDeCategorias}
+    ORDER BY nombre ASC
+  `;
+
+    res.send(resultadosConsulta);
+  }
+});
+
+// AGREGAR PROGRAMAS
+Servidor.post("/post", async (req, res) => {
+  const {
+    nombre,
+    link_de_imagen,
+    link_de_descarga,
+    detalles,
+    categoriaSeleccionadaFinal,
+  } = req.body;
+  // console.log(req.body.categoriaSeleccionadaFinal)
+
+  if (!nombre || !link_de_imagen || !link_de_descarga || !detalles) {
+    res.status(400).send("Error, faltan campos requeridos");
+    return;
+  }
+
+  // Esto convierte las categorias seleccionas de esto [ 'Categoria 1, Categoria 2' ] -> [ 'Categoria 1', 'Categoria 2' ]
+
+  // console.log(categoriaSeleccionadaFinal);
+  let array = categoriaSeleccionadaFinal;
+  const resultadoArray = array.map((item) => item.split(", ")).flat();
+
+  await consulta`
+  INSERT INTO programas (
+    nombre, 
+    link_de_imagen, 
+    link_de_descarga, 
+    detalles, 
+    categorias
+  ) 
+  VALUES (
+    ${nombre}, 
+    ${link_de_imagen}, 
+    ${link_de_descarga}, 
+    ${detalles}, 
+    ${resultadoArray}
+  )
+`;
+
+  res.send("Se agrego el programa exitosamente");
+});
+// Se inicializa el servidor por el puerto predefinodo
+Servidor.listen(port, () => {
+  console.log(`Servidor escuchando en el puerto ${port}`);
 });
